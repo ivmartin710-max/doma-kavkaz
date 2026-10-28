@@ -16,13 +16,21 @@ function list_(sh) {
 }
 function json_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 
-function doGet() { return json_({ votes: list_(sheet_()) }); }
+function doGet(e) {
+  var p = (e && e.parameter) || {};
+  if (p.action === 'vote') {
+    return vote_({ name: p.name, token: p.token, picks: String(p.picks || '').split(',').filter(String) });
+  }
+  return json_({ votes: list_(sheet_()) });
+}
 
-function doPost(e) {
+function doPost(e) { return vote_(JSON.parse((e && e.postData && e.postData.contents) || '{}')); }
+
+function vote_(body) {
   var lock = LockService.getScriptLock();
-  lock.waitLock(10000);
   try {
-    var sh = sheet_(), body = JSON.parse(e.postData.contents || '{}');
+    lock.waitLock(10000);
+    var sh = sheet_();
     var name = String(body.name || '').trim().slice(0, 30), token = String(body.token || '').slice(0, 64);
     if (!name) return json_({ error: 'no_name', votes: list_(sh) });
     var picks = (body.picks || []).map(String).filter(function (k, i, a) { return KEYS.indexOf(k) > -1 && a.indexOf(k) === i; });
@@ -42,5 +50,7 @@ function doPost(e) {
       sh.appendRow([name, picks.join(','), token, new Date()]);
     }
     return json_({ ok: true, votes: list_(sh) });
-  } finally { lock.releaseLock(); }
+  } catch (err) {
+    return json_({ error: 'server', detail: String(err) });
+  } finally { try { lock.releaseLock(); } catch (x) {} }
 }

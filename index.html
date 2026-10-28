@@ -316,9 +316,9 @@ img{max-width:100%}
   function load(){ if(!online)return; fetch(API+'?t='+Date.now()).then(function(r){return r.json()}).then(function(d){apply(d);render()}).catch(function(){if(!loaded){note='Не удалось загрузить голоса. Обновите страницу.';render()}}); }
   function save(picks){
     busy=true; note=''; render();
-    fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({name:nameI.value.trim(),token:token,picks:picks})})
+    fetch(API+'?action=vote&name='+encodeURIComponent(nameI.value.trim())+'&token='+encodeURIComponent(token)+'&picks='+encodeURIComponent(picks.join(','))+'&t='+Date.now())
       .then(function(r){return r.json()})
-      .then(function(d){ if(d.error) note=ERR[d.error]||'Голос не сохранился. Попробуйте ещё раз.'; apply(d); })
+      .then(function(d){ if(d.error) note=ERR[d.error]||('Голос не сохранился'+(d.detail?': '+d.detail:'')+'. Попробуйте ещё раз.'); else if(!d.ok) note='Таблица не приняла голос. Скорее всего, в ней старая версия скрипта.'; apply(d); })
       .catch(function(){note='Голос не сохранился. Проверьте интернет и попробуйте ещё раз.'})
       .then(function(){busy=false;render()});
   }
