@@ -27,9 +27,9 @@ function doGet(e) {
 function doPost(e) { return vote_(JSON.parse((e && e.postData && e.postData.contents) || '{}')); }
 
 function vote_(body) {
-  var lock = LockService.getScriptLock();
+  var lock = null;
+  try { lock = LockService.getDocumentLock(); if (!lock.tryLock(3000)) lock = null; } catch (x) { lock = null; }
   try {
-    lock.waitLock(10000);
     var sh = sheet_();
     var name = String(body.name || '').trim().slice(0, 30), token = String(body.token || '').slice(0, 64);
     if (!name) return json_({ error: 'no_name', votes: list_(sh) });
@@ -52,5 +52,5 @@ function vote_(body) {
     return json_({ ok: true, votes: list_(sh) });
   } catch (err) {
     return json_({ error: 'server', detail: String(err) });
-  } finally { try { lock.releaseLock(); } catch (x) {} }
+  } finally { if (lock) { try { lock.releaseLock(); } catch (x) {} } }
 }
